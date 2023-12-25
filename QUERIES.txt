@@ -1,0 +1,450 @@
+# QUERY 1: Get all the tweets that contain at least the word 'Biden' or 'Sleepy Joe' and that also include at least one word between 'election', 'fraud', 'rigged', 'vote', 'fake'
+
+GET /trump_tweets_analysis/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "bool": {
+            "should": [
+              { "match": { "text": "Biden" }},
+              { "match": { "text": "Sleepy Joe" }}
+            ]
+          }
+        },
+        {
+          "bool": {
+            "should": [
+              { "match": { "text": "election" }},
+              { "match": { "text": "fraud" }},
+              { "match": { "text": "rigged" }},
+              { "match": { "text": "fake" }},
+              { "match": { "text": "vote" }}
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
+
+HIT:201
+
+
+#QUERY 2 : Get all the tweets that contain atleast one word between 'Biden' and 'Sleepy Joe' and that also include at least one word between 'election', 'fraud', 'rigged', 'vote', 'fake'. 
+Count the ones that are flagged which means that X (aka Twitter) decided to flagbecause they were considered harmful or against the policies.
+
+GET /trump_tweets_analysis/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "bool": {
+            "should": [
+              { "match": { "text": "Biden" }},
+              { "match": { "text": "Sleepy Joe" }}
+            ]
+          }
+        },
+        {
+          "bool": {
+            "should": [
+              { "match": { "text": "election" }},
+              { "match": { "text": "fraud" }},
+              { "match": { "text": "rigged" }},
+              { "match": { "text": "fake" }},
+              { "match": { "text": "vote" }}
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "aggs": {
+    "flagged_count": {
+      "filter": {
+        "term": { "is_flagged": "TRUE" }
+      }
+    }
+  }
+}
+
+HIT 201, flagged count = 12
+
+#QUERY 3: Get the average retweets and favorites per tweet containing words that may be related to elections and what happened during the protests after the presidential elections of 2020.
+
+GET /trump_tweets_analysis/_search
+{
+  "size": 0,
+  "query": {
+    "bool": {
+      "must": [
+        { "bool": {
+            "should": [
+              { "match": { "text": "election" }},
+              { "match": { "text": "fraud" }},
+              { "match": { "text": "protest" }},
+              { "match": { "text": "protests" }},
+              { "match": { "text": "rigged" }},
+              { "match": { "text": "vote" }}
+            ]
+          }
+        },
+        { "range": { "datetime": { "gte": "2020-11-01", "lte": "2021-12-31" }}}
+      ]
+    }
+  },
+  "aggs": {
+        "avg_retweets": {
+          "avg": {
+            "field": "retweets"
+          }
+        },
+        "avg_favorites": {
+          "avg": {
+            "field": "favorites"
+          }
+        }
+      }
+}
+
+#QUERY 4: Get the monthly tweet count.
+
+GET /trump_tweets_analysis/_search
+{
+  "size":0,
+    "aggs": {
+      "monthly_tweets": {
+        "date_histogram": {
+          "field": "datetime",
+          "calendar_interval": "month",
+          "format": "yyyy-MM",
+          "order": { "_key": "asc" }
+        }
+      }
+    }
+  }
+
+#QUERY 5: Get the tweets that contain the word economy or similar using fuzziness. And sort them i ascending order. Not perrfect matches have lower scores
+
+{
+    "query": {
+      "fuzzy": {
+        "text": {
+          "value": "economy",
+          "fuzziness": 2
+        }
+      }
+    },
+  "sort": [
+    {
+      "_score": {
+        "order": "asc"
+      }
+    }
+  ]
+}
+
+#QUERY 6: Retreive tweet and datetime of the tweet with most retweets per year.
+
+GET /trump_tweets_analysis/_search
+{
+  "size": 0,
+  "aggs": {
+    "tweets_by_year": {
+      "date_histogram": {
+        "field": "datetime",
+        "calendar_interval": "year",
+        "format": "yyyy",
+        "order": { "_key": "asc" }
+      },
+      "aggs": {
+        "top_retweets": {
+          "terms": {
+            "field": "id",
+            "order": { "max_retweets.value": "desc" },
+            "size": 1
+          },
+          "aggs": {
+            "max_retweets": {
+              "max": {
+                "field": "retweets"
+              }
+            },
+            "tweet_details": {
+              "top_hits": {
+                "size": 1,
+                "_source": {
+                  "includes": ["text", "datetime"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+#QUERY 7: Retrieve tweets having at least one word that is covid, virus, vaccine. That are not retweet and that are made in 2020.
+Get the aggregate count by month and get the one with maximum retweet
+
+GET /trump_tweets_analysis/_search
+{
+  "size": 0,
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "bool": {
+            "should": [
+              { "match": { "text": "covid" }},
+              { "match": { "text": "virus" }},
+              { "match": { "text": "vaccine" }}
+            ]
+          }
+        },
+        { "term": { "is_retweet": "FALSE" }},
+        { "range": { "datetime": { "gte": "2020-01-01" }}}
+      ]
+    }
+  },
+  "aggs": {
+    "monthly_tweets": {
+      "date_histogram": {
+        "field": "datetime",
+        "calendar_interval": "month",
+        "format": "yyyy-MM",
+        "order": { "_key": "asc" }
+      },
+      "aggs": {
+        "top_retweets": {
+          "terms": {
+            "field": "id",
+            "order": { "max_retweets.value": "desc" },
+            "size": 1
+          },
+          "aggs": {
+            "max_retweets": {
+              "max": {
+                "field": "retweets"
+              }
+            },
+            "tweet_details": {
+              "top_hits": {
+                "size": 1,
+                "_source": {
+                  "includes": ["text", "datetime"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+#QUERY 8: Get the average retweet and favorite per tweet per month related to china and virus and vaccine. That is not a retweet and tht was written in 2020.
+
+GET trump_tweets_analysis/_search
+{
+  "size": 0,
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "bool": {
+            "should": [
+              { "match": { "text": "covid" }},
+              { "match": { "text": "china" }},
+              { "match": { "text": "vaccine" }}
+            ]
+          }
+        },
+        { "term": { "is_retweet": "FALSE" }},
+        { "range": { "datetime": { "gte": "2020-01-01" }}}
+      ]
+    }
+  },
+  "aggs": {
+    "monthly_stats": {
+      "date_histogram": {
+        "field": "datetime",
+        "calendar_interval": "month",
+        "format": "yyyy-MM",
+        "order": { "_key": "asc" }
+      },
+      "aggs": {
+        "avg_favorites": {
+          "avg": {
+            "field": "favorites"
+          }
+        },
+        "avg_retweets": {
+          "avg": {
+            "field": "retweets"
+          }
+        }
+      }
+    }
+  }
+}
+
+#QUERY 9: Get the number of tweets per year that were deleted. And for each year get the text and datetime of the one with most favorites.
+
+GET /trump_tweets_analysis/_search
+{
+  "size": 0,
+  "query": {
+    "bool": {
+      "must": [
+        { "term": { "is_deleted": "TRUE" }}
+      ]
+    }
+  },
+  "aggs": {
+    "deleted_tweets_by_year": {
+      "date_histogram": {
+        "field": "datetime",
+        "calendar_interval": "year",
+        "format": "yyyy",
+        "order": { "_key": "asc" }
+      },
+      "aggs": {
+        "top_favorites": {
+          "terms": {
+            "field": "id",
+            "order": { "max_favorites.value": "desc" },
+            "size": 1
+          },
+          "aggs": {
+            "max_favorites": {
+              "max": {
+                "field": "favorites"
+              }
+            },
+            "tweet_details": {
+              "top_hits": {
+                "size": 1,
+                "_source": {
+                  "includes": ["text", "datetime", "favorites"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+#Query 10: Get the tweet count per month of tweets containing 'Hillary' or 'Clinton' or 'democrats' made in 2016 and get the tweet count per month of tweets containing 'Biden' or 'Sleepy Joe' or 'democrats' in 2020.
+
+GET /trump_tweets_analysis/_search
+{
+  "size": 0,
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "bool": {
+            "must": [
+              { "match": { "text": "Hillary" }},
+              { "range": { "datetime": { "gte": "2016-01-01", "lt": "2017-01-01" }}}
+            ]
+          }
+        },
+        {
+          "bool": {
+            "must": [
+              { "match": { "text": "Clinton" }},
+              { "range": { "datetime": { "gte": "2016-01-01", "lt": "2017-01-01" }}}
+            ]
+          }
+        },
+        {
+          "bool": {
+            "must": [
+              { "match": { "text": "democrats" }},
+              { "range": { "datetime": { "gte": "2016-01-01", "lt": "2017-01-01" }}}
+            ]
+          }
+        },
+        {
+          "bool": {
+            "must": [
+              { "match": { "text": "Biden" }},
+              { "range": { "datetime": { "gte": "2020-01-01", "lt": "2021-01-01" }}}
+            ]
+          }
+        },
+        {
+          "bool": {
+            "must": [
+              { "match": { "text": "Sleepy Joe" }},
+              { "range": { "datetime": { "gte": "2020-01-01", "lt": "2021-01-01" }}}
+            ]
+          }
+        },
+        {
+          "bool": {
+            "must": [
+              { "match": { "text": "democrats" }},
+              { "range": { "datetime": { "gte": "2020-01-01", "lt": "2021-01-01" }}}
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "aggs": {
+    "monthly_tweets_2016": {
+      "filter": {
+        "range": {
+          "datetime": {
+            "gte": "2016-01-01",
+            "lt": "2017-01-01"
+          }
+        }
+      },
+      "aggs": {
+        "monthly_tweets": {
+          "date_histogram": {
+            "field": "datetime",
+            "calendar_interval": "month",
+            "format": "yyyy-MM",
+            "order": { "_key": "asc" }
+          }
+        }
+      }
+    },
+    "monthly_tweets_2020": {
+      "filter": {
+        "range": {
+          "datetime": {
+            "gte": "2020-01-01",
+            "lt": "2021-01-01"
+          }
+        }
+      },
+      "aggs": {
+        "monthly_tweets": {
+          "date_histogram": {
+            "field": "datetime",
+            "calendar_interval": "month",
+            "format": "yyyy-MM",
+            "order": { "_key": "asc" }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
