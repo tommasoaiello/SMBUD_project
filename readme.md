@@ -8,6 +8,7 @@ This project is part of a course named 'Systems and Methods for Big and Unstruct
 ## Dataset
 
 The dataset used for analysis is the "trump_tweets_archive" downloaded from kaggle (https://www.kaggle.com/datasets/headsortails/trump-twitter-archive) containing tweets attributed to the former U.S. President Donald Trump. The dataset was made public by Brendan of https://www.thetrumparchive.com/
+
 The dataset consists of more than 56k Trump's tweets with various attributes such as tweet id, text, is_retweet, is_deleted, device, favorites, retweets, datetime, is_flagged, date. The goal of the project is to perform meaningful queries using ElasticSearch and visualize the results in Kibana.
 
 ## Queries
