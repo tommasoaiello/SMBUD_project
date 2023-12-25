@@ -190,7 +190,7 @@ GET /trump_tweets_analysis/_search
 
 
 #QUERY 7: Retrieve tweets having at least one word that is covid, virus, vaccine. That are not retweet and that are made in 2020.
-Get the aggregate count by month and get the one with maximum retweet
+Get the aggregate count by month and get the one with maximum retweet.
 
 GET /trump_tweets_analysis/_search
 {
